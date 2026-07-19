@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PacketForge – Visual TCP/IP Packet Lab</title>
+  <style>
+    /* ----- Reset & Base ----- */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #070B18;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: #e0e6ff;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* ----- Animated Background (Network Grid + Binary Rain) ----- */
+    #bg-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.3;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ----- Scrollbar ----- */
+    ::-webkit-scrollbar {
+      width: 6px;
+      background: #0b132a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #00E5FF;
+      border-radius: 8px;
+      box-shadow: 0 0 20px #00E5FF88;
+    }
+
+    /* ----- Glassmorphism Card ----- */
+    .glass {
+      background: rgba(7, 11, 24, 0.55);
+      backdrop-filter: blur(12px) saturate(180%);
+      -webkit-backdrop-filter: blur(12px) saturate(180%);
+      border: 1px solid rgba(0, 229, 255, 0.15);
+      border-radius: 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 0 60px rgba(0, 229, 255, 0.02);
+      transition: 0.3s;
+    }
+
+    .glass:hover {
+      border-color: rgba(0, 229, 255, 0.4);
+      box-shadow: 0 8px 48px rgba(0, 229, 255, 0.1), inset 0 0 80px rgba(0, 229, 255, 0.04);
+    }
+
+    /* ----- Typography ----- */
+    h1, h2, h3 {
+      font-weight: 300;
+      letter-spacing: 0.02em;
+    }
+
+    .glow-text {
+      text-shadow: 0 0 30px rgba(0, 229, 255, 0.3);
+    }
+
+    .cyan {
+      color: #00E5FF;
+    }
+    .purple {
+      color: #7C4DFF;
+    }
+    .emerald {
+      color: #00C853;
+    }
+    .orange {
+      color: #FF9800;
+    }
+    .blue {
+      color: #2196F3;
+    }
+
+    /* ----- Buttons ----- */
+    .btn {
+      display: inline-block;
+      padding: 12px 32px;
+      border: 1px solid #00E5FF;
+      border-radius: 50px;
+      color: #00E5FF;
+      background: transparent;
+      font-weight: 600;
+      font-size: 0.95rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      transition: 0.3s;
+      cursor: pointer;
+      text-decoration: none;
+      backdrop-filter: blur(4px);
+    }
+    .btn:hover {
+      background: #00E5FF;
+      color: #070B18;
+      box-shadow: 0 0 30px #00E5FF66;
+      transform: scale(1.03);
+    }
+    .btn-purple {
+      border-color: #7C4DFF;
+      color: #7C4DFF;
+    }
+    .btn-purple:hover {
+      background: #7C4DFF;
+      color: #070B18;
+      box-shadow: 0 0 30px #7C4DFF66;
+    }
+
+    /* ----- Section Spacing ----- */
+    section {
+      padding: 80px 0;
+      position: relative;
+    }
+
+    .section-title {
+      font-size: 2.8rem;
+      font-weight: 300;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .section-title span {
+      background: linear-gradient(135deg, #00E5FF, #7C4DFF);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ----- HERO ----- */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 0;
+    }
+    #hero .hero-content h1 {
+      font-size: 5rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      background: linear-gradient(135deg, #00E5FF, #7C4DFF, #2196F3);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 0 80px rgba(0, 229, 255, 0.2);
+      margin-bottom: 16px;
+    }
+    #hero .hero-content p {
+      font-size: 1.5rem;
+      font-weight: 300;
+      color: #a0b4d0;
+      margin-bottom: 32px;
+      letter-spacing: 0.1em;
+    }
+    .hero-badge {
+      display: inline-block;
+      padding: 6px 20px;
+      border-radius: 30px;
+      border: 1px solid rgba(0, 229, 255, 0.2);
+      backdrop-filter: blur(4px);
+      font-size: 0.8rem;
+      color: #00E5FF;
+      letter-spacing: 0.15em;
+      margin-bottom: 30px;
+    }
+    .hero-actions .btn {
+      margin: 0 12px;
+    }
+
+    /* ----- FLOATING PACKETS (animated) ----- */
+    .floating-packets {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+    .packet {
+      position: absolute;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      color: rgba(0, 229, 255, 0.15);
+      animation: floatPacket 20s infinite linear;
+      white-space: nowrap;
+    }
+    @keyframes floatPacket {
+      0% { transform: translateY(110vh) translateX(-20px); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateY(-10vh) translateX(40px); opacity: 0; }
+    }
+
+    /* ----- FEATURES / CARDS ----- */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 30px;
+      margin-top: 40px;
+    }
+    .feature-card {
+      padding: 30px 24px;
+      text-align: center;
+      transition: 0.3s;
+      border: 1px solid rgba(0, 229, 255, 0.08);
+    }
+    .feature-card:hover {
+      transform: translateY(-6px);
+      border-color: rgba(0, 229, 255, 0.25);
+    }
+    .feature-card .icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      display: block;
+    }
+    .feature-card h3 {
+      font-size: 1.3rem;
+      margin-bottom: 10px;
+      color: #fff;
+    }
+    .feature-card p {
+      font-size: 0.95rem;
+      color: #8899bb;
+      line-height: 1.6;
+    }
+
+    /* ----- PACKET BUILDER (Interactive Demo) ----- */
+    #packet-builder {
+      background: rgba(7, 11, 24, 0.4);
+      border-radius: 32px;
+      padding: 40px;
+      margin: 40px 0;
+      border: 1px solid rgba(0, 229, 255, 0.1);
+      backdrop-filter: blur(8px);
+    }
+    .builder-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: flex-end;
+      margin-bottom: 30px;
+    }
+    .builder-controls .field {
+      flex: 1 0 180px;
+    }
+    .builder-controls label {
+      display: block;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #8899bb;
+      margin-bottom: 6px;
+    }
+    .builder-controls select,
+    .builder-controls input {
+      width: 100%;
+      padding: 12px 16px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(0, 229, 255, 0.15);
+      border-radius: 12px;
+      color: #e0e6ff;
+      font-family: 'Courier New', monospace;
+      font-size: 0.95rem;
+      outline: none;
+      transition: 0.3s;
+    }
+    .builder-controls select:focus,
+    .builder-controls input:focus {
+      border-color: #00E5FF;
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.1);
+    }
+    .builder-controls select option {
+      background: #0b132a;
+    }
+    .btn-build {
+      padding: 12px 32px;
+      background: linear-gradient(135deg, #00E5FF, #7C4DFF);
+      border: none;
+      border-radius: 50px;
+      font-weight: 600;
+      color: #070B18;
+      cursor: pointer;
+      transition: 0.3s;
+      font-size: 1rem;
+      box-shadow: 0 0 30px rgba(0, 229, 255, 0.2);
+      flex: 0 0 auto;
+    }
+    .btn-build:hover {
+      transform: scale(1.04);
+      box-shadow: 0 0 50px rgba(0, 229, 255, 0.4);
+    }
+
+    /* Packet Preview */
+    .packet-preview {
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 16px;
+      padding: 24px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      color: #a0b4d0;
+      border: 1px solid rgba(0, 229, 255, 0.05);
+      min-height: 120px;
+      position: relative;
+      overflow: hidden;
+      transition: 0.3s;
+    }
+    .packet-preview .packet-line {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(0, 229, 255, 0.05);
+    }
+    .packet-preview .offset {
+      color: #7C4DFF;
+      width: 50px;
+      flex-shrink: 0;
+    }
+    .packet-preview .hex {
+      color: #00E5FF;
+      letter-spacing: 2px;
+    }
+    .packet-preview .ascii {
+      color: #FF9800;
+      margin-left: auto;
+    }
+    .packet-preview .highlight {
+      animation: pulseHex 1.2s infinite;
+    }
+    @keyframes pulseHex {
+      0%, 100% { color: #00E5FF; }
+      50% { color: #7C4DFF; text-shadow: 0 0 20px #7C4DFF; }
+    }
+
+    /* Animated packet flow */
+    .packet-flow {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+      position: relative;
+    }
+    .packet-flow .node {
+      padding: 12px 20px;
+      border-radius: 30px;
+      background: rgba(0, 229, 255, 0.05);
+      border: 1px solid rgba(0, 229, 255, 0.15);
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #00E5FF;
+      backdrop-filter: blur(4px);
+    }
+    .packet-flow .arrow {
+      color: #7C4DFF;
+      font-size: 1.8rem;
+      animation: arrowPulse 1.5s infinite;
+    }
+    @keyframes arrowPulse {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+    .packet-flow .packet-anim {
+      position: absolute;
+      left: 30%;
+      width: 16px;
+      height: 16px;
+      background: #00E5FF;
+      border-radius: 50%;
+      box-shadow: 0 0 40px #00E5FF;
+      animation: movePacket 2.5s infinite alternate ease-in-out;
+    }
+    @keyframes movePacket {
+      0% { left: 10%; opacity: 0.2; }
+      50% { opacity: 1; }
+      100% { left: 75%; opacity: 0.2; }
+    }
+
+    /* ----- PROTOCOL CARDS ----- */
+    .protocol-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 20px;
+      margin-top: 30px;
+    }
+    .protocol-card {
+      padding: 24px 16px;
+      text-align: center;
+      border: 1px solid rgba(0, 229, 255, 0.06);
+      border-radius: 20px;
+      transition: 0.3s;
+      background: rgba(7, 11, 24, 0.3);
+      backdrop-filter: blur(4px);
+    }
+    .protocol-card:hover {
+      border-color: rgba(0, 229, 255, 0.3);
+      transform: translateY(-4px);
+      box-shadow: 0 8px 32px rgba(0, 229, 255, 0.06);
+    }
+    .protocol-card .proto-icon {
+      font-size: 2.2rem;
+      margin-bottom: 10px;
+      display: block;
+    }
+    .protocol-card h4 {
+      font-weight: 400;
+      color: #fff;
+      font-size: 1.1rem;
+    }
+    .protocol-card .desc {
+      font-size: 0.75rem;
+      color: #8899bb;
+      margin-top: 6px;
+    }
+
+    /* ----- DASHBOARD WIDGETS ----- */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 24px;
+      margin-top: 30px;
+    }
+    .widget {
+      padding: 24px 20px;
+      border-radius: 20px;
+      background: rgba(7, 11, 24, 0.3);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(0, 229, 255, 0.06);
+      text-align: center;
+    }
+    .widget .number {
+      font-size: 2.8rem;
+      font-weight: 300;
+      background: linear-gradient(135deg, #00E5FF, #7C4DFF);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .widget .label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #8899bb;
+      margin-top: 4px;
+    }
+    .widget .trend {
+      font-size: 0.8rem;
+      color: #00C853;
+      margin-top: 8px;
+    }
+
+    /* ----- FAQ ----- */
+    .faq-item {
+      padding: 20px 0;
+      border-bottom: 1px solid rgba(0, 229, 255, 0.06);
+    }
+    .faq-item .question {
+      font-weight: 500;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .faq-item .question .icon {
+      color: #00E5FF;
+      transition: 0.3s;
+    }
+    .faq-item .answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: 0.4s ease;
+      color: #8899bb;
+      padding-top: 0;
+      line-height: 1.6;
+    }
+    .faq-item.active .answer {
+      max-height: 300px;
+      padding-top: 16px;
+    }
+    .faq-item.active .question .icon {
+      transform: rotate(180deg);
+    }
+
+    /* ----- FOOTER ----- */
+    footer {
+      border-top: 1px solid rgba(0, 229, 255, 0.05);
+      padding: 40px 0 24px;
+      text-align: center;
+      color: #4a5a7a;
+      font-size: 0.9rem;
+      margin-top: 40px;
+    }
+    footer a {
+      color: #00E5FF;
+      text-decoration: none;
+    }
+
+    /* ----- Responsive ----- */
+    @media (max-width: 768px) {
+      #hero .hero-content h1 {
+        font-size: 2.8rem;
+      }
+      #hero .hero-content p {
+        font-size: 1.2rem;
+      }
+      .section-title {
+        font-size: 2rem;
+      }
+      #packet-builder {
+        padding: 20px;
+      }
+      .builder-controls .field {
+        flex: 1 0 100%;
+      }
+      .packet-flow .node {
+        font-size: 0.7rem;
+        padding: 8px 14px;
+      }
+    }
+
+    /* ----- Utilities ----- */
+    .text-center {
+      text-align: center;
+    }
+    .mt-40 {
+      margin-top: 40px;
+    }
+    .mb-20 {
+      margin-bottom: 20px;
+    }
+    .flex-center {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== ANIMATED BACKGROUND ===== -->
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- ===== FLOATING PACKETS ===== -->
+  <div class="floating-packets" id="floatingPackets"></div>
+
+  <!-- ===== MAIN WRAPPER ===== -->
+  <div class="container">
+
+    <!-- ===== HERO ===== -->
+    <section id="hero">
+      <div class="hero-content">
+        <div class="hero-badge">⚡ NETWORK ENGINEERING LAB v1.0</div>
+        <h1>PACKETFORGE</h1>
+        <p>Visual TCP/IP Packet Crafting Laboratory</p>
+        <p style="font-size: 1.1rem; color: #7C4DFF; letter-spacing: 0.15em; margin-bottom: 28px;">
+          Craft • Inspect • Analyze
+        </p>
+        <div class="hero-actions">
+          <a href="#packet-builder" class="btn">⟳ Launch Lab</a>
+          <a href="#features" class="btn btn-purple">Explore</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== FEATURES ===== -->
+    <section id="features">
+      <h2 class="section-title"><span>✦ Laboratory Features</span></h2>
+      <div class="features-grid">
+        <div class="glass feature-card">
+          <span class="icon">📦</span>
+          <h3>Packet Builder</h3>
+          <p>Construct custom packets with ease – choose protocol, flags, and payload visually.</p>
+        </div>
+        <div class="glass feature-card">
+          <span class="icon">🔍</span>
+          <h3>Protocol Explorer</h3>
+          <p>Deep dive into TCP, UDP, ICMP, DNS, HTTP – see header structures in real time.</p>
+        </div>
+        <div class="glass feature-card">
+          <span class="icon">📊</span>
+          <h3>Live Dashboard</h3>
+          <p>Monitor packet counts, protocol distribution, and recent activity with animated widgets.</p>
+        </div>
+        <div class="glass feature-card">
+          <span class="icon">🧪</span>
+          <h3>Checksum & Validation</h3>
+          <p>Automatically compute checksums and validate packet integrity.</p>
+        </div>
+        <div class="glass feature-card">
+          <span class="icon">📂</span>
+          <h3>Export & History</h3>
+          <p>Save packet definitions and review your crafting history.</p>
+        </div>
+        <div class="glass feature-card">
+          <span class="icon">🔗</span>
+          <h3>TCP Handshake Anim</h3>
+          <p>Visualize SYN → SYN/ACK → ACK with animated packet flow.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== INTERACTIVE PACKET BUILDER ===== -->
+    <section id="packet-builder" class="glass">
+      <h2 style="font-weight: 300; margin-bottom: 12px;">🧪 Packet Crafting Console</h2>
+      <p style="color: #8899bb; margin-bottom: 24px;">Configure your packet and see the live preview below.</p>
+
+      <div class="builder-controls">
+        <div class="field">
+          <label>Protocol</label>
+          <select id="protocol">
+            <option value="TCP">TCP</option>
+            <option value="UDP">UDP</option>
+            <option value="ICMP">ICMP</option>
+            <option value="DNS">DNS</option>
+            <option value="HTTP">HTTP</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Destination IP</label>
+          <input type="text" id="destIP" value="192.168.1.10" />
+        </div>
+        <div class="field">
+          <label>Port</label>
+          <input type="number" id="port" value="443" />
+        </div>
+        <div class="field">
+          <label>Flags</label>
+          <select id="flags">
+            <option value="SYN">SYN</option>
+            <option value="ACK">ACK</option>
+            <option value="SYN/ACK">SYN/ACK</option>
+            <option value="FIN">FIN</option>
+            <option value="RST">RST</option>
+            <option value="PSH">PSH</option>
+            <option value="URG">URG</option>
+          </select>
+        </div>
+        <button class="btn-build" id="buildPacket">▶ Build Packet</button>
+      </div>
+
+      <!-- Packet Flow Animation -->
+      <div class="packet-flow">
+        <span class="node">🖥️ Sender</span>
+        <span class="arrow">⤍</span>
+        <span class="node">🌐 Network</span>
+        <span class="arrow">⤍</span>
+        <span class="node">🎯 Receiver</span>
+        <div class="packet-anim" id="packetAnim"></div>
+      </div>
+
+      <!-- Packet Preview -->
+      <div class="packet-preview" id="packetPreview">
+        <div class="packet-line"><span class="offset">0000</span><span class="hex">45 00 00 3c 1a 2b 40 00 40 06 6f 8c c0 a8 01 0a</span><span class="ascii">E..<. +@.@.o....</span></div>
+        <div class="packet-line"><span class="offset">0010</span><span class="hex">c0 a8 01 01 00 50 01 bb 00 00 00 00 00 00 00 00</span><span class="ascii">.....P..........</span></div>
+        <div class="packet-line"><span class="offset">0020</span><span class="hex highlight">50 10 01 00 00 00 00 00 00 00 00 00 00 00 00 00</span><span class="ascii">P...............</span></div>
+        <div style="margin-top:12px; color:#7C4DFF; font-size:0.8rem;">⚡ Flags: <span id="flagDisplay">SYN</span> &nbsp;|&nbsp; Protocol: <span id="protoDisplay">TCP</span></div>
+      </div>
+    </section>
+
+    <!-- ===== PROTOCOL CARDS ===== -->
+    <section>
+      <h2 class="section-title"><span>📡 Protocol Reference</span></h2>
+      <div class="protocol-grid">
+        <div class="protocol-card glass">
+          <span class="proto-icon">🔷</span>
+          <h4>TCP</h4>
+          <div class="desc">Transmission Control Protocol</div>
+        </div>
+        <div class="protocol-card glass">
+          <span class="proto-icon">🔹</span>
+          <h4>UDP</h4>
+          <div class="desc">User Datagram Protocol</div>
+        </div>
+        <div class="protocol-card glass">
+          <span class="proto-icon">📶</span>
+          <h4>ICMP</h4>
+          <div class="desc">Internet Control Message Protocol</div>
+        </div>
+        <div class="protocol-card glass">
+          <span class="proto-icon">🌐</span>
+          <h4>DNS</h4>
+          <div class="desc">Domain Name System</div>
+        </div>
+        <div class="protocol-card glass">
+          <span class="proto-icon">🌍</span>
+          <h4>HTTP</h4>
+          <div class="desc">HyperText Transfer Protocol</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== DASHBOARD WIDGETS ===== -->
+    <section>
+      <h2 class="section-title"><span>📊 Live Dashboard</span></h2>
+      <div class="dashboard-grid">
+        <div class="widget glass">
+          <div class="number" id="totalPackets">1,284</div>
+          <div class="label">Total Packets</div>
+          <div class="trend">↑ 12%</div>
+        </div>
+        <div class="widget glass">
+          <div class="number" id="tcpCount">845</div>
+          <div class="label">TCP Packets</div>
+        </div>
+        <div class="widget glass">
+          <div class="number" id="udpCount">312</div>
+          <div class="label">UDP Packets</div>
+        </div>
+        <div class="widget glass">
+          <div class="number" id="avgSize">1.4 KB</div>
+          <div class="label">Avg. Payload Size</div>
+        </div>
+      </div>
+      <div style="margin-top:30px; background:rgba(7,11,24,0.3); border-radius:20px; padding:20px; border:1px solid rgba(0,229,255,0.05);">
+        <p style="color:#8899bb; font-size:0.9rem; display:flex; justify-content:space-between; flex-wrap:wrap;">
+          <span>📌 Recent Activity: <span style="color:#00E5FF;">[TCP] SYN → 192.168.1.10:443</span></span>
+          <span style="color:#4a5a7a;">⚡ 12:34:21</span>
+        </p>
+        <p style="color:#8899bb; font-size:0.9rem; display:flex; justify-content:space-between; flex-wrap:wrap; margin-top:8px;">
+          <span>📌 Recent Activity: <span style="color:#FF9800;">[UDP] DNS query → 8.8.8.8:53</span></span>
+          <span style="color:#4a5a7a;">⚡ 12:34:19</span>
+        </p>
+      </div>
+    </section>
+
+    <!-- ===== FAQ ===== -->
+    <section>
+      <h2 class="section-title"><span>❓ Frequently Asked Questions</span></h2>
+      <div class="glass" style="padding: 30px;">
+        <div class="faq-item">
+          <div class="question" onclick="toggleFAQ(this)">
+            <span>What is PacketForge?</span>
+            <span class="icon">▼</span>
+          </div>
+          <div class="answer">PacketForge is a visual, educational packet crafting laboratory. It helps you understand TCP/IP packet structures through an interactive UI – no real packets are sent.</div>
+        </div>
+        <div class="faq-item">
+          <div class="question" onclick="toggleFAQ(this)">
+            <span>Is this a real packet generator?</span>
+            <span class="icon">▼</span>
+          </div>
+          <div class="answer">No, it’s a simulation. Everything is visual and educational, designed for learning networking concepts and portfolio demonstration.</div>
+        </div>
+        <div class="faq-item">
+          <div class="question" onclick="toggleFAQ(this)">
+            <span>Can I export packet definitions?</span>
+            <span class="icon">▼</span>
+          </div>
+          <div class="answer">Yes, the lab includes an export feature to save packet configurations in JSON format (demo only).</div>
+        </div>
+        <div class="faq-item">
+          <div class="question" onclick="toggleFAQ(this)">
+            <span>Is it open source?</span>
+            <span class="icon">▼</span>
+          </div>
+          <div class="answer">Yes, the source code is available on GitHub under the MIT License.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== FOOTER ===== -->
+    <footer>
+      <p style="margin-bottom:12px;">
+        <span style="color:#00E5FF;">✦</span> PacketForge – Visual TCP/IP Packet Crafting Laboratory 
+        <span style="color:#7C4DFF;">✦</span>
+      </p>
+      <p>
+        Built with <span style="color:#FF9800;">❤</span> for education &amp; portfolio. 
+        <a href="#">GitHub</a> &middot; <a href="#">Documentation</a>
+      </p>
+      <p style="margin-top:12px; font-size:0.75rem; color:#2a3a5a;">
+        © 2025 Raj Gautam – MIT License
+      </p>
+    </footer>
+
+  </div> <!-- /container -->
+
+  <script>
+    // ===== ANIMATED BACKGROUND (Canvas) =====
+    (function() {
+      const canvas = document.getElementById('bg-canvas');
+      const ctx = canvas.getContext('2d');
+      let w, h;
+
+      function resize() {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      // Binary rain & grid
+      const chars = '01';
+      const fontSize = 16;
+      let columns = Math.floor(w / fontSize);
+      let drops = new Array(columns).fill(1);
+
+      function draw() {
+        ctx.fillStyle = 'rgba(7, 11, 24, 0.06)';
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.fillStyle = '#00E5FF';
+        ctx.font = fontSize + 'px monospace';
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = '#00E5FF33';
+
+        for (let i = 0; i < drops.length; i++) {
+          const text = chars[Math.floor(Math.random() * chars.length)];
+          ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+          if (drops[i] * fontSize > h && Math.random() > 0.975) {
+            drops[i] = 0;
+          }
+          drops[i]++;
+        }
+
+        // Draw grid lines (subtle)
+        ctx.strokeStyle = 'rgba(0, 229, 255, 0.02)';
+        ctx.lineWidth = 0.5;
+        for (let x = 0; x < w; x += 40) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, h);
+          ctx.stroke();
+        }
+        for (let y = 0; y < h; y += 40) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(w, y);
+          ctx.stroke();
+        }
+
+        requestAnimationFrame(draw);
+      }
+      draw();
+    })();
+
+    // ===== FLOATING PACKETS =====
+    (function() {
+      const container = document.getElementById('floatingPackets');
+      const hexValues = ['0x45', '0x00', '0x3c', '0x1a', '0x2b', '0x40', '0x06', '0x6f', '0x8c', '0xc0', '0xa8', '0x01', '0x0a'];
+      for (let i = 0; i < 25; i++) {
+        const el = document.createElement('div');
+        el.className = 'packet';
+        el.textContent = hexValues[Math.floor(Math.random() * hexValues.length)];
+        el.style.left = Math.random() * 90 + '%';
+        el.style.animationDuration = (18 + Math.random() * 20) + 's';
+        el.style.animationDelay = (Math.random() * 15) + 's';
+        el.style.fontSize = (0.7 + Math.random() * 0.6) + 'rem';
+        container.appendChild(el);
+      }
+    })();
+
+    // ===== PACKET BUILDER =====
+    const buildBtn = document.getElementById('buildPacket');
+    const protocolSelect = document.getElementById('protocol');
+    const destIP = document.getElementById('destIP');
+    const portInput = document.getElementById('port');
+    const flagsSelect = document.getElementById('flags');
+    const flagDisplay = document.getElementById('flagDisplay');
+    const protoDisplay = document.getElementById('protoDisplay');
+    const previewDiv = document.getElementById('packetPreview');
+
+    function updatePacketPreview() {
+      const proto = protocolSelect.value;
+      const ip = destIP.value || '192.168.1.10';
+      const port = portInput.value || '443';
+      const flags = flagsSelect.value;
+
+      flagDisplay.textContent = flags;
+      protoDisplay.textContent = proto;
+
+      // Build random hex lines (demo)
+      const lines = [
+        { offset: '0000', hex: '45 00 00 3c 1a 2b 40 00 40 06 6f 8c ' + ip.split('.').map(n => ('0' + parseInt(n).toString(16)).slice(-2)).join(' '), ascii: 'E..<.+@.@.o....' },
+        { offset: '0010', hex: 'c0 a8 01 01 00 ' + ('0' + parseInt(port).toString(16)).slice(-2) + ' 01 bb 00 00 00 00 00 00 00 00', ascii: '.....P..........' },
+        { offset: '0020', hex: '50 10 01 00 00 00 00 00 00 00 00 00 00 00 00 00', ascii: 'P...............' }
+      ];
+
+      // Apply different colors for protocol
+      let highlightClass = 'highlight';
+      if (proto === 'UDP') highlightClass = 'highlight-udp';
+      else if (proto === 'ICMP') highlightClass = 'highlight-icmp';
+
+      // Rebuild preview
+      let html = '';
+      lines.forEach((line, idx) => {
+        const cls = idx === 2 ? 'hex ' + highlightClass : 'hex';
+        html += `<div class="packet-line"><span class="offset">${line.offset}</span><span class="${cls}">${line.hex}</span><span class="ascii">${line.ascii}</span></div>`;
+      });
+      html += `<div style="margin-top:12px; color:#7C4DFF; font-size:0.8rem;">⚡ Flags: <span id="flagDisplay">${flags}</span> &nbsp;|&nbsp; Protocol: <span id="protoDisplay">${proto}</span></div>`;
+      previewDiv.innerHTML = html;
+
+      // Animate packet movement
+      const anim = document.getElementById('packetAnim');
+      anim.style.animation = 'none';
+      void anim.offsetHeight; // reflow
+      anim.style.animation = 'movePacket 2.5s infinite alternate ease-in-out';
+    }
+
+    buildBtn.addEventListener('click', updatePacketPreview);
+
+    // Initial update
+    updatePacketPreview();
+
+    // ===== DASHBOARD COUNTERS (animated) =====
+    (function animateCounters() {
+      const totalEl = document.getElementById('totalPackets');
+      const tcpEl = document.getElementById('tcpCount');
+      const udpEl = document.getElementById('udpCount');
+
+      let total = 1284, tcp = 845, udp = 312;
+      setInterval(() => {
+        total += Math.floor(Math.random() * 3);
+        tcp += Math.floor(Math.random() * 2);
+        udp += Math.floor(Math.random() * 2);
+        totalEl.textContent = total.toLocaleString();
+        tcpEl.textContent = tcp.toLocaleString();
+        udpEl.textContent = udp.toLocaleString();
+      }, 3000);
+    })();
+
+    // ===== FAQ TOGGLE =====
+    window.toggleFAQ = function(el) {
+      const parent = el.parentElement;
+      parent.classList.toggle('active');
+    };
+  </script>
+</body>
+</html>
