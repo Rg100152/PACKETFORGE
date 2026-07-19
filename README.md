@@ -208,6 +208,12 @@ mobile.png
 - Performance Metrics
 
 ---
+<img width="1080" height="2400" alt="Screenshot_2026-07-19-20-11-18-86_a2cf8efcdd42a8e6f7906303f104fb67" src="https://github.com/user-attachments/assets/af706c4f-8573-4d20-ac90-2d1b63d7b897" />
+<img width="1080" height="2400" alt="Screenshot_2026-07-19-20-11-13-64_a2cf8efcdd42a8e6f7906303f104fb67" src="https://github.com/user-attachments/assets/b8a38769-7261-46f4-b309-b1c6bb681854" />
+<img width="1080" height="2400" alt="Screenshot_2026-07-19-20-11-07-66_a2cf8efcdd42a8e6f7906303f104fb67" src="https://github.com/user-attachments/assets/8db046b2-b624-4091-859f-12461000d3b1" />
+<img width="1080" height="2400" alt="Screenshot_2026-07-19-20-10-55-16_a2cf8efcdd42a8e6f7906303f104fb67" src="https://github.com/user-attachments/assets/98d1dcd3-471e-4c27-a563-5fd264a0f812" />
+<img width="1080" height="2400" alt="Screenshot_2026-07-19-20-10-46-44_a2cf8efcdd42a8e6f7906303f104fb67" src="https://github.com/user-attachments/assets/2de4dfc4-c18a-4627-bf33-b6290c8946cb" />
+
 
 # 🤝 Contributing
 
